@@ -1,60 +1,3 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
-
-train_datapath = r'D:\Dataset\Exercises dataset\train'
-test_datapath = r'D:\Dataset\Exercises dataset\test'
-
-dataset_path = os.listdir(train_datapath)
-
-label_types = os.listdir(train_datapath)
-print(label_types)
-
-rooms = []
-
-for item in dataset_path:
-    # Get all the file names
-    all_rooms = os.listdir(train_datapath + '/' + item)
-
-    # Add them to the list
-    for room in all_rooms:
-        rooms.append((item, str(train_datapath + '/' + item) + '/' + room))
-
-# Build a dataframe
-train_df = pd.DataFrame(data=rooms, columns=['tag', 'video_name'])
-print(train_df.head())
-print(train_df.tail())
-
-df = train_df.loc[:, ['video_name', 'tag']]
-df
-df.to_csv('train.csv')
-
-dataset_path = os.listdir(test_datapath)
-print(dataset_path)
-
-room_types = os.listdir(test_datapath)
-print("Types of Fitness Movement: ", len(dataset_path))
-
-rooms = []
-
-for item in dataset_path:
-    # Get all the file names
-    all_rooms = os.listdir(test_datapath + '/' + item)
-
-    # Add them to the list
-    for room in all_rooms:
-        rooms.append((item, str(test_datapath + '/' + item) + '/' + room))
-
-# Build a dataframe
-test_df = pd.DataFrame(data=rooms, columns=['tag', 'video_name'])
-print(test_df.head())
-print(test_df.tail())
-
-df = test_df.loc[:, ['video_name', 'tag']]
-df
-df.to_csv('test.csv')
-
 # !pip install git+https://github.com/tensorflow/docs
 
 from tensorflow_docs.vis import embed
@@ -231,17 +174,19 @@ def get_sequence_model():
     x = keras.layers.GRU(8)(x)
     x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
+    x = keras.layers.Flatten()(x)
     output = keras.layers.Dense(len(class_vocab), activation="softmax")(x)
 
     rnn_model = keras.Model([frame_features_input, mask_input], output)
+    print(rnn_model.summary())
 
     rnn_model.compile(
-        loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+        loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["acc"]
     )
     return rnn_model
 
 
-EPOCHS = 30
+EPOCHS = 500
 
 
 # Utility for running experiments.
@@ -269,9 +214,8 @@ def run():
 
 
 history, sequence_model = run()
-#
 export_dir = 'saved_model/1'
-tf.saved_model.save(history, export_dir)
+tf.saved_model.save(sequence_model, export_dir)
 
 converter = tf.lite.TFLiteConverter.from_saved_model(export_dir)
 tflite_model = converter.convert()
