@@ -3,6 +3,9 @@
 from tensorflow_docs.vis import embed
 from tensorflow import keras
 from imutils import paths
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.layers import *
 
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -37,6 +40,11 @@ train_df.sample(10)
 # The following two methods are taken from this tutorial:
 # https://www.tensorflow.org/hub/tutorials/action_recognition_with_tf_hub
 IMG_SIZE = 224
+BATCH_SIZE = 64
+EPOCHS = 100
+
+MAX_SEQ_LENGTH = 100
+NUM_FEATURES = 2048
 
 
 def crop_center_square(frame):
@@ -90,26 +98,16 @@ feature_extractor = build_feature_extractor()
 
 """#**Label Encoding**"""
 
-label_processor = keras.layers.StringLookup(num_oov_indices=0, vocabulary=np.unique(train_df["tag"]))
+label_processor = keras.layers.experimental.preprocessing.StringLookup(
+    num_oov_indices=0, vocabulary=np.unique(train_df["tag"]))
 print(label_processor.get_vocabulary())
-
-labels = train_df["tag"].values
-labels = label_processor(labels[..., None]).numpy()
-# print(labels)
-
-IMG_SIZE = 224
-BATCH_SIZE = 64
-EPOCHS = 100
-
-MAX_SEQ_LENGTH = 20
-NUM_FEATURES = 2048
 
 
 def prepare_all_videos(df, root_dir):
     num_samples = len(df)
     video_paths = df["video_name"].values.tolist()
 
-    #take all classlabels from train_df column named 'tag' and store in labels
+    # take all classlabels from train_df column named 'tag' and store in labels
     labels = df["tag"].values
 
     # convert classlabels to label encoding
@@ -142,9 +140,8 @@ def prepare_all_videos(df, root_dir):
                     batch[None, j, :]
                 )
             temp_frame_mask[i, :length] = 1  # 1 = not masked, 0 = masked
-
-        frame_features[idx,] = temp_frame_features.squeeze()
-        frame_masks[idx,] = temp_frame_mask.squeeze()
+            frame_features[idx,] = temp_frame_features.squeeze()
+            frame_masks[idx,] = temp_frame_mask.squeeze()
 
     return (frame_features, frame_masks), labels
 
@@ -159,6 +156,24 @@ print(f"train_labels in train set: {train_labels.shape}")
 
 print(f"test_labels in train set: {test_labels.shape}")
 
+"""#**Pretrained Model**"""
+
+input_tensor = tf.keras.layers.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
+
+base = ResNet50(weights="imagenet", include_top=False, input_tensor=input_tensor, input_shape=(IMG_SIZE, IMG_SIZE, 3))
+# base.load_weights('resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5')
+
+top = Dense(11, activation='softmax')(
+    Dropout(0.5)(
+        Dense(2048, activation='relu')(
+            Dropout(0.5)(
+                GlobalAveragePooling2D()(base.output)
+            )
+        )
+    )
+)
+
+model = Model(input_tensor, top)
 
 """#**The Sequence Model**"""
 
@@ -170,11 +185,16 @@ def get_sequence_model():
     frame_features_input = keras.Input((MAX_SEQ_LENGTH, NUM_FEATURES))
     mask_input = keras.Input((MAX_SEQ_LENGTH,), dtype="bool")
 
-    x = keras.layers.GRU(16, return_sequences=True)(frame_features_input, mask=mask_input)
-    x = keras.layers.GRU(8)(x)
+    x = keras.layers.LSTM(200, return_sequences=True)(
+        frame_features_input, mask=mask_input
+    )
+    x = keras.layers.LSTM(200, return_sequences=True)(x)
+    x = keras.layers.GRU(20)(x)
     x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(8, activation="relu")(x)
-    x = keras.layers.Flatten()(x)
+    x = keras.layers.Dense(2048, activation="relu")(x)
+    x = keras.layers.Dense(1024, activation="relu")(x)
+    x = keras.layers.Dense(512, activation="relu")(x)
+    x = keras.layers.Dense(256, activation="relu")(x)
     output = keras.layers.Dense(len(class_vocab), activation="softmax")(x)
 
     rnn_model = keras.Model([frame_features_input, mask_input], output)
@@ -186,11 +206,17 @@ def get_sequence_model():
     return rnn_model
 
 
-EPOCHS = 500
+for layer in model.layers:
+    layer.trainable = False
+
+for i in range(-5, 0):
+    model.layers[i].trainable = True
+
+model.compile(keras.optimizers.Adam(learning_rate=10e-5), loss='categorical_crossentropy', metrics=['accuracy'])
 
 
 # Utility for running experiments.
-def run():
+def run_training():
     filepath = "./tmp/video_classifier"
     checkpoint = keras.callbacks.ModelCheckpoint(
         filepath, save_weights_only=True, save_best_only=True, verbose=1
@@ -213,10 +239,10 @@ def run():
     return history, seq_model
 
 
-history, sequence_model = run()
-export_dir = 'saved_model/1'
-tf.saved_model.save(sequence_model, export_dir)
-
-converter = tf.lite.TFLiteConverter.from_saved_model(export_dir)
-tflite_model = converter.convert()
-tflite_model.export('saved_model/model.tflite')
+history2, sequence_model = run_training()
+export_dir = 'saved_model'
+sequence_model.save(export_dir)
+#
+# converter = tf.lite.TFLiteConverter.from_saved_model(export_dir)
+# tflite_model = converter.convert()
+# tflite_model.export('saved_model/model.tflite')

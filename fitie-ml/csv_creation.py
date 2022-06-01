@@ -12,6 +12,8 @@ print(label_types)
 
 rooms = []
 
+classes = ['Arm Raise','Bicycle Crunch','Bird Dog','Curl','Fly', 'Leg Raise', 'Overhead Press', 'Push Up', 'Squat',
+           'Superman']
 
 for item in dataset_path:
     # Get all the file names
