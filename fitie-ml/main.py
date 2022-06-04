@@ -27,21 +27,38 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 """# **Data Preparation**"""
 
-train_df = pd.read_csv("train.csv")
-test_df = pd.read_csv("test.csv")
+# train_df = pd.read_csv("train.csv")
+# test_df = pd.read_csv("test.csv")
+
+# print(f"Total videos for training: {len(train_df)}")
+# print(f"Total videos for testing: {len(test_df)}")
+
+# train_df.sample(10)
+
+
+"""# **split the data into train and test**"""
+
+df = pd.read_csv('dataset.csv', header=None)
+df.columns = ["class", "path"]
+df = df.astype({"class": str})
+train, test = np.split(df.sample(frac=1, random_state=42), [int(.8*len(df))])
+
+train_df = train
+test_df = test
 
 print(f"Total videos for training: {len(train_df)}")
 print(f"Total videos for testing: {len(test_df)}")
 
 train_df.sample(10)
 
+
 """# **Feed the video to a network**"""
 
 # The following two methods are taken from this tutorial:
 # https://www.tensorflow.org/hub/tutorials/action_recognition_with_tf_hub
 IMG_SIZE = 224
-BATCH_SIZE = 64
-EPOCHS = 100
+BATCH_SIZE = 32
+EPOCHS = 500
 
 MAX_SEQ_LENGTH = 100
 NUM_FEATURES = 2048
@@ -99,16 +116,16 @@ feature_extractor = build_feature_extractor()
 """#**Label Encoding**"""
 
 label_processor = keras.layers.experimental.preprocessing.StringLookup(
-    num_oov_indices=0, vocabulary=np.unique(train_df["tag"]))
+    num_oov_indices=0, vocabulary=np.unique(train_df["class"]))
 print(label_processor.get_vocabulary())
 
 
 def prepare_all_videos(df, root_dir):
     num_samples = len(df)
-    video_paths = df["video_name"].values.tolist()
+    video_paths = df["path"].values.tolist()
 
-    # take all classlabels from train_df column named 'tag' and store in labels
-    labels = df["tag"].values
+    # take all classlabels from train_df column named 'class' and store in labels
+    labels = df["class"].values
 
     # convert classlabels to label encoding
     labels = label_processor(labels[..., None]).numpy()
@@ -188,20 +205,22 @@ def get_sequence_model():
     x = keras.layers.LSTM(200, return_sequences=True)(
         frame_features_input, mask=mask_input
     )
+    x = keras.layers.Dropout(0.5)(x)
     x = keras.layers.LSTM(200, return_sequences=True)(x)
+    x = keras.layers.Dropout(0.5)(x)
     x = keras.layers.GRU(20)(x)
-    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dropout(0.5)(x)
     x = keras.layers.Dense(2048, activation="relu")(x)
+    x = keras.layers.Dropout(0.6)(x)
     x = keras.layers.Dense(1024, activation="relu")(x)
-    x = keras.layers.Dense(512, activation="relu")(x)
-    x = keras.layers.Dense(256, activation="relu")(x)
+    x = keras.layers.Dropout(0.6)(x)
     output = keras.layers.Dense(len(class_vocab), activation="softmax")(x)
 
     rnn_model = keras.Model([frame_features_input, mask_input], output)
     print(rnn_model.summary())
 
     rnn_model.compile(
-        loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["acc"]
+        loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
     )
     return rnn_model
 
@@ -217,13 +236,13 @@ model.compile(keras.optimizers.Adam(learning_rate=10e-5), loss='categorical_cros
 
 # Utility for running experiments.
 def run_training():
-    filepath = "./tmp/video_classifier"
+    filepath = ".\\tmp\\video_classifier"
     checkpoint = keras.callbacks.ModelCheckpoint(
-        filepath, save_weights_only=True, save_best_only=True, verbose=1
+        filepath, save_weights_only=True, save_best_only=False, verbose=1
     )
 
     seq_model = get_sequence_model()
-    history = seq_model.fit(
+    seq_model.fit(
         [train_data[0], train_data[1]],
         train_labels,
         validation_split=0.3,
@@ -236,13 +255,13 @@ def run_training():
     print(f"Test accuracy: {round(accuracy * 100, 2)}%")
     print(f"Test Loss: {round(loss * 100, 2)}%")
 
-    return history, seq_model
+    return seq_model
 
 
-history2, sequence_model = run_training()
+sequence_model = run_training()
 export_dir = 'saved_model'
 sequence_model.save(export_dir)
 #
-# converter = tf.lite.TFLiteConverter.from_saved_model(export_dir)
+# converter = tf.lite.TFLiteConverter.from_keras_model(sequence_model)
 # tflite_model = converter.convert()
 # tflite_model.export('saved_model/model.tflite')
