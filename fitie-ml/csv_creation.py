@@ -12,7 +12,7 @@ print(label_types)
 
 rooms = []
 
-classes = ['Arm Raise','Bench Press','Body Weight Squats','Curl','Fly','Handstand Push Up', 'Jump Rope',
+classes = ['Bench Press','Body Weight Squats','Handstand Push Up', 'Jump Rope',
            'Jumping Jack', 'Leg Raise', 'Lunges', 'Overhead Press', 'Pull Up', 'Push Up']
 
 with open('dataset.csv', 'w', newline='') as file:

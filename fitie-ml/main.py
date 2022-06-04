@@ -238,11 +238,11 @@ model.compile(keras.optimizers.Adam(learning_rate=10e-5), loss='categorical_cros
 def run_training():
     filepath = ".\\tmp\\video_classifier"
     checkpoint = keras.callbacks.ModelCheckpoint(
-        filepath, save_weights_only=True, save_best_only=False, verbose=1
+        filepath, save_weights_only=True, save_best_only=True, verbose=1
     )
 
     seq_model = get_sequence_model()
-    seq_model.fit(
+    history = seq_model.fit(
         [train_data[0], train_data[1]],
         train_labels,
         validation_split=0.3,
@@ -253,13 +253,14 @@ def run_training():
     seq_model.load_weights(filepath)
     loss, accuracy = seq_model.evaluate([test_data[0], test_data[1]], test_labels)
     print(f"Test accuracy: {round(accuracy * 100, 2)}%")
-    print(f"Test Loss: {round(loss * 100, 2)}%")
 
-    return seq_model
+    return history, seq_model
 
 
-sequence_model = run_training()
-export_dir = 'saved_model'
+history2, sequence_model = run_training()
+# print(history2.history)
+export_dir = 'saved_model2'
+sequence_model.save('model2.h5')
 sequence_model.save(export_dir)
 #
 # converter = tf.lite.TFLiteConverter.from_keras_model(sequence_model)
