@@ -18,7 +18,6 @@ Fitie is a machine learning based fitness move prediction. The machine learning 
 
 ## Mobile Development
 - Create the wireframe using Figma
-- 
 
 ## Deployment
-All deployment files are saved in `fitieproject/fitie-ml/deploy`
+All deployment files are saved in [deploy folder](https://github.com/doyoktana/fitieproject/tree/main/fitie-ml/deploy).
