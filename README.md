@@ -10,14 +10,8 @@ Fitie is a machine learning based fitness move prediction. The machine learning 
 - Save and export the model into to .h5 format.
 - Deploy the model using Flask
 
-## Cloud Computing
-- Create Google Cloud Project.
-- Create cloud Vertex AI and use Notebook Jupyter. 
-- Collect datasets in cloud storage.
-- Create a multi-region standard cloud storage bucket.
-
 ## Mobile Development
-- Create the wireframe using Figma
+- Create the wireframe using [Figma](https://www.figma.com/file/sWUdoJZN1ptvlEyabUuiEj/Fitie?node-id=0%3A1)
 
 ## Deployment
 All deployment files are saved in [deploy folder](https://github.com/doyoktana/fitieproject/tree/main/fitie-ml/deploy).
