@@ -5,8 +5,9 @@ Fitie is a machine learning based fitness move prediction. The machine learning 
 ## Machine Learning
 - Finding dataset about fitness moves. If possible, the dataset is in video form.
 - Doing research about video classification.
-- Create the python code.
-- Create model from the dataset.
+- Create the python code for preproccessing data.
+- Code the feature extraction
+- Create and experimenting the model from the dataset.
 - Save and export the model into to .h5 format.
 - Deploy the model using Flask
 
