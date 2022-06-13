@@ -11,7 +11,7 @@ Fitie is a machine learning based fitness move prediction. The machine learning 
 - Deploy the model using Flask
 
 ## Mobile Development
-- Create the wireframe using [Figma](https://www.figma.com/file/sWUdoJZN1ptvlEyabUuiEj/Fitie?node-id=0%3A1)
+- Create the wireframe using [Figma](https://www.figma.com/proto/sWUdoJZN1ptvlEyabUuiEj/Fitie?node-id=7%3A38&scaling=scale-down&page-id=0%3A1&starting-point-node-id=7%3A20&show-proto-sidebar=1)
 
 ## Deployment
 All deployment files are saved in [deploy folder](https://github.com/doyoktana/fitieproject/tree/main/fitie-ml/deploy).
